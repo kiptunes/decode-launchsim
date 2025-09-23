@@ -1,18 +1,30 @@
 # using cm as the base unit for everything here so sorry everything's a nightmare to parse
 
 import pygame, sys, math
+import pygame_menu
 
 wWindow, hWindow = 960, 540
 bg_color = (250, 240, 180) # this is yellow
 gutter = 20
+
 white, black, light_gray, medium_gray, dark_gray = (255, 255, 255), (0, 0, 0), (220, 220, 220), (200, 200, 200), (120, 120, 120)
-red, purple, green = (200, 80, 80), (160, 40, 200), (80, 200, 100)
+red, pink = (200, 80, 80), (250, 210, 220)
+teamRed, teamBlue = (220, 60, 60), (60, 60, 220)
+purple, green = (160, 40, 200), (80, 200, 100)
 divider_color = (240, 150, 60)
 blue, dark_blue = (150, 200, 200), (120, 160, 200)
 
 FLOOR = 340
 CM = 1.5
 STEP = 10 * CM  # 10 pixels per 0.1 meter
+
+miniMulti = 0.56
+field_length = math.floor(144 * 2.54 *miniMulti) # 144" to cm to mini
+field_surf = pygame.Surface((field_length, field_length))
+field_rect = field_surf.get_rect()
+tile = field_length/6
+tile_diagonal = math.sqrt(2*tile**2)
+tunnel_width = 15.6 * miniMulti
 
 # lengths (cm)
 maxdist = 408.93 * CM           # field is 6x6 of 24" square tiles, the farthest  valid
@@ -106,16 +118,51 @@ artifact = ball(500, FLOOR - artifact_radius, artifact_radius, purple)
 robot = rectangle(wWindow-gutter*2-maxdist+1, FLOOR - robot_width/3, robot_width, robot_width/3, blue)
 shooter = ball(robot.x + artifact_radius+4, robot.y, artifact_radius + 2, dark_blue)
 
-# update window
-def drawWindow():
-    win.fill(bg_color)
-    # graph area
-    pygame.draw.rect(win, white, pygame.Rect(wWindow - maxdist - gutter*3 -40, gutter, maxdist+gutter*2 +40, FLOOR+30), 0, 5)   # '+5's added in later to account for graph labels
-                                                                                                                                # should have made a surface for the rect but I di
-                                                                                                                                # -dn't think that far ahead
-    pygame.draw.rect(win, divider_color, pygame.Rect(wWindow - maxdist - gutter*3 -40, gutter, maxdist+gutter*2 +40, FLOOR+30), 1, 5) 
+def drawField():
+    field_surf.fill(white)
+    win.blit(field_surf, (gutter, gutter))
+    field_rect.topleft= (gutter, gutter)
+    # launch zones
+    pygame.draw.polygon(win, pink, (field_rect.topleft, field_rect.topright, field_rect.center))
+    pygame.draw.polygon(win, pink, ((field_rect.bottomleft[0] + tile*2, field_rect.bottomleft[1]), (field_rect.bottomright[0] - tile*2, field_rect.bottomright[1]), (field_rect.centerx, field_rect.centery+ tile*2)))
+    # goals
+    pygame.draw.polygon(win, teamRed, (field_rect.topleft, (field_rect.topleft[0] + tile, field_rect.topleft[1]), (field_rect.topleft[0]+tunnel_width, field_rect.topleft[1]+tile), (field_rect.topleft[0], field_rect.topleft[1]+tile)))
+    pygame.draw.polygon(win, teamBlue, (field_rect.topright, (field_rect.topright[0] - tile, field_rect.topright[1]), (field_rect.topright[0]-tunnel_width, field_rect.topright[1]+tile), (field_rect.topright[0], field_rect.topright[1]+tile)))
+    pygame.draw.rect(win, divider_color,pygame.Rect(field_rect[0], field_rect[1], field_rect[2] +1, field_rect[3]+1), 1)
 
-    # graph itself
+warningText = font1.render('WARNING: INVALID LAUNCH', True, red)
+warningText_rect = warningText.get_rect()
+warningText_rect.center = (field_rect.centerx+15, field_rect.bottom + 40)
+
+
+def updatePos(distance):
+    distance = (wWindow-gutter*2+3)-(robot.x+robot_width) # the variable is called 'xdist' but the axis from overhead is defined along a diagonal
+    distanceMini = distance*miniMulti
+    if distanceMini <= math.sqrt(2*(tile*3)**2):
+        validpos = True
+        minix = distanceMini*math.cos(math.pi/4) + field_rect.left # setting theta to 45 degrees or pi/4 radians because the diagonal is along a 45/45/90 triangle made with the tiles
+        miniy = distanceMini*math.sin(math.pi/4) + field_rect.top
+    elif distanceMini >= math.sqrt((tile*3)**2+(tile*5)**2) and distanceMini <= math.sqrt((tile*3)**2+(tile*6)**2): # topmost point of smaller launch zone is a point on a 3x5 tile rectangle
+        validpos = True
+        minix = field_rect.centerx
+        miniy = distanceMini*math.sin(math.acos((field_rect.centerx -field_rect.left)/distanceMini)) + field_rect.top
+    elif distanceMini > math.sqrt((tile*3)**2+(tile*6)**2) and distanceMini <= math.sqrt((2*(tile*6)**2)):
+            validpos = True
+            minix = distanceMini*math.cos(math.asin((field_length)/distanceMini)) + field_rect.left
+            miniy = field_rect.bottom
+    elif distanceMini >= math.sqrt((2*(tile*6)**2)):
+            validpos = False
+            minix = field_rect.bottomright[0]
+            miniy = field_rect.bottomleft[1]
+    else:
+        validpos = False
+        minix = field_rect.centerx
+        miniy = distanceMini*math.sin(math.acos((field_rect.centerx -field_rect.left)/distanceMini)) + field_rect.top
+        
+    return (minix, miniy, validpos)
+
+def drawGraph():
+     # graph itself
     # rows
     for i in range(round((FLOOR-gutter)/STEP)):
         if i % 5 == 0:
@@ -158,6 +205,22 @@ def drawWindow():
     win.blit(xAxisLabel, xAxisLabel_Rect)
     win.blit(yAxisLabel, yAxisLabel_Rect)
 
+
+# update window
+def drawWindow():
+    win.fill(bg_color)
+    # graph area
+    pygame.draw.rect(win, white, pygame.Rect(wWindow - maxdist - gutter*3 -40, gutter, maxdist+gutter*2 +40, FLOOR+30), 0, 5)   # '+#'s added in later to account for graph labels
+                                                                                                                                # should have made a surface for the rect but I di
+                                                                                                                                # -dn't think that far ahead
+    pygame.draw.rect(win, divider_color, pygame.Rect(wWindow - maxdist - gutter*3 -40, gutter, maxdist+gutter*2 +40, FLOOR+30), 1, 5) 
+
+    drawField()
+    drawGraph()
+    minipos = updatePos(robot.x)
+    pygame.draw.circle(win, red, (minipos[0], minipos[1]), 4)
+    if minipos[2] == False:
+        win.blit(warningText, warningText_rect)
     # goal
     pygame.draw.rect(win, red, pygame.Rect(wWindow-gutter*2-goal_width+3, FLOOR - goal_height, goal_width, goal_height))
     pygame.draw.line(win, red, (wWindow-gutter*2-1, FLOOR-2), (wWindow-gutter*2-1, FLOOR - goal_backboard), 4)
@@ -183,6 +246,8 @@ time = 0
 vinitial = 200
 launchAngle = math.radians(45) 
 
+minipos = 'VALID'
+
 while run:
     clock.tick(framerate)
 
@@ -206,10 +271,12 @@ while run:
         key_pressed_is = pygame.key.get_pressed()
         if key_pressed_is[pygame.K_LEFT]:
             robot.x -= CM
+            if robot.x < wWindow - maxdist -gutter*2 +1:
+                robot.x = wWindow-maxdist-gutter*2 +1
         if key_pressed_is[pygame.K_RIGHT]:
             robot.x += CM
-        if robot.x < wWindow - maxdist -gutter*2 +1:
-            robot.x = wWindow-maxdist-gutter*2 +1
+            if robot.x +robot_width > wWindow-gutter*2-goal_width+.2:
+                robot.x = wWindow-gutter*2-goal_width+3 - robot_width
 
     # changing angle of chute
         if launchAngle < 0:
@@ -222,8 +289,8 @@ while run:
         shot = ball.trajectory(x, y, vinitial, launchAngle, time)
         artifact.x = shot[0]
         artifact.y = shot[1]
-        if artifact.y < FLOOR - artifact.radius + 1:
-            if artifact.x <= wWindow - gutter - artifact.radius + 1:
+        if artifact.y <= FLOOR - artifact.radius:
+            if artifact.x <= wWindow - gutter - artifact.radius:
                 time += 0.05
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time)
                 artifact.x = shot[0]
@@ -240,6 +307,7 @@ while run:
             offset = 0
             artifact.y = FLOOR - artifact.radius
             print('landed')
+            
 
 
                 
