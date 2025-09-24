@@ -2,12 +2,24 @@
 #  sorry 
 #
 import pygame, sys, math
+from ui import *
+#import pygame_textinput
 
 
 wWindow, hWindow = 960, 540
-bg_color = (250, 240, 180) # this is yellow
+bg_color = (120, 120, 120)
 gutter = 20
 
+clock = pygame.time.Clock()
+framerate = 60
+
+held = False
+launch = False
+time = 0
+vinitial = 200
+launchAngle = math.radians(45) 
+
+minipos = 'VALID'
 # window setup
 win = pygame.display.set_mode((wWindow, hWindow))
 pygame.display.set_caption('DECODE Launch Simulator')
@@ -15,11 +27,11 @@ pygame.font.init()
 pygame.font.get_init()
 font1 = pygame.font.SysFont('dejavusansmono', 10)
 
-white, black, light_gray, medium_gray, dark_gray = (255, 255, 255), (0, 0, 0), (220, 220, 220), (200, 200, 200), (120, 120, 120)
+white, black, light_gray, medium_gray, gray, dark_gray = (245, 245, 245), (0, 0, 0), (220, 220, 220), (200, 200, 200), (150, 150, 150), (120, 120, 120)
 red, pink = (200, 80, 80), (250, 210, 220)
 teamRed, teamBlue = (220, 60, 60), (60, 60, 220)
 purple, green = (160, 40, 200), (80, 200, 100)
-divider_color = (240, 150, 60)
+divider_color = (50, 50, 50)
 blue, dark_blue = (150, 200, 200), (120, 160, 200)
 
 FLOOR = 340
@@ -46,9 +58,8 @@ goal_width = 46.45 * CM
 goal_height = 98.45 * CM
 goal_backboard = goal_height + 38.1*CM
 
-
-
 g = -9.8 * 10          # acceleration due to gravity in cm/s
+
 
 class ball(object):
     def __init__(self, x, y, radius, color):
@@ -112,12 +123,13 @@ robot = rectangle(wWindow-gutter*2-maxdist+1, FLOOR - robot_width/3, robot_width
 shooter = ball(robot.x + artifact_radius+4, robot.y, artifact_radius + 2, dark_blue)
 
 class menu(object):
-    def __init__(self, leftx, topy, width, height, color):
+    def __init__(self, leftx, topy, width, height, color, title):
         self.leftx = leftx
         self.topy = topy
         self.width = width
         self.height = height
         self.color = color
+        self.title = title
         self.menuSurf = pygame.Surface((width, height))
         self.menuRect = self.menuSurf.get_rect()
     
@@ -126,18 +138,33 @@ class menu(object):
         self.menuSurf.fill(self.color)
         win.blit(self.menuSurf, (self.leftx, self.topy))
         menuRect.topleft = (self.leftx, self.topy)
+
+        title = font1.render(self.title, True, white)
+        title_rect = pygame.Rect(menuRect[0]+6, menuRect[1]+5, menuRect[2]-5, menuRect[3])
+        title_surf = pygame.Surface((menuRect[2], 24))
+        title_surf.fill(divider_color)
+
+        win.blit(title_surf, (menuRect[0], menuRect[1]))
+        win.blit(title, title_rect)
         pygame.draw.rect(win, divider_color,pygame.Rect(menuRect[0], menuRect[1], menuRect[2] +1, menuRect[3]+1), 1)
 
 loadMenu_width = (maxdist+gutter*2 +40) // 3
 loadMenu_height = hWindow - (FLOOR + 50 + gutter*2)
-currentVars = menu(gutter, field_length+gutter*2+15, field_length, hWindow-field_length-gutter*2-35, white)
-prevVars = menu(wWindow-loadMenu_width-gutter, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, white)
-storedVars = menu(wWindow-loadMenu_width*2-gutter*2, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, white)
+currentVars = menu(gutter, field_length+gutter*2+15, field_length, hWindow-field_length-gutter*2-35, gray, 'CURRENT VALUES')
+prevVars = menu(field_length+2 +gutter*2, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, gray, 'LAST LAUNCH')
+storedVars = menu(field_length+2 +gutter*3+loadMenu_width, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, gray, 'STORED LAUNCH')
+
+checkbox1 = checkbox(win, currentVars.leftx + 8, currentVars.topy + 40, 'Show trajectory')
+# viTextbox = textbox(win, currentVars.leftx + 8, currentVars.topy + 50, field_length-16, 20, str(vinitial))
+#textinput = pygame_textinput.
 
 def drawMenus():
     currentVars.draw(win)
     prevVars.draw(win)
     storedVars.draw(win)
+    checkbox1._draw_checkbox()
+
+    #win.blit(textinput.surface, (10, 10))
 
 def drawField():
     field_surf.fill(white)
@@ -242,12 +269,12 @@ def drawWindow():
     drawField()
     drawGraph()
     minipos = updatePos(robot.x)
-    pygame.draw.circle(win, red, (minipos[0], minipos[1]), 4)
+    pygame.draw.circle(win, dark_blue, (minipos[0], minipos[1]), 4)
     if minipos[2] == False:
         win.blit(warningText, warningText_rect)
     # goal
-    pygame.draw.rect(win, red, pygame.Rect(wWindow-gutter*2-goal_width+3, FLOOR - goal_height, goal_width, goal_height))
-    pygame.draw.line(win, red, (wWindow-gutter*2-1, FLOOR-2), (wWindow-gutter*2-1, FLOOR - goal_backboard), 4)
+    pygame.draw.rect(win, teamRed, pygame.Rect(wWindow-gutter*2-goal_width+3, FLOOR - goal_height, goal_width, goal_height))
+    pygame.draw.line(win, teamRed, (wWindow-gutter*2-1, FLOOR-2), (wWindow-gutter*2-1, FLOOR - goal_backboard), 4)
 
     # moving objects
     artifact.draw(win)
@@ -260,23 +287,11 @@ def drawWindow():
     #pygame.display.flip() 
     pygame.display.update() 
 
-clock = pygame.time.Clock()
 run = True
-framerate = 60
-
-held = False
-launch = False
-time = 0
-vinitial = 200
-launchAngle = math.radians(45) 
-
-minipos = 'VALID'
-
 while run:
     clock.tick(framerate)
-
+    
     for event in pygame.event.get():
-
         # quit
         if event.type == pygame.QUIT:
             run = False
@@ -290,7 +305,21 @@ while run:
                     launch = True
                     x = artifact.x
                     y = artifact.y
-        
+    
+    if event.type == pygame.MOUSEBUTTONDOWN:
+        if event.button == 1:
+            checkbox1.update_checkbox()
+
+    # if event.type == pygame.MOUSEBUTTONDOWN and viTextbox.input_rect.collidepoint(pygame.mouse.get_pos()):
+    #     if event.button == 1:
+    #         if not viTextbox.is_active:
+    #             viTextbox.text =''
+    #             viTextbox.is_active = True
+    #             print('hit')
+    #             viTextbox.text_update()
+                
+
+
     # moving robot
     if event.type == pygame.KEYDOWN:
         key_pressed_is = pygame.key.get_pressed()
@@ -331,7 +360,8 @@ while run:
             time = 0
             offset = 0
             artifact.y = FLOOR - artifact.radius
-            print('landed')        
+            print('landed')   
+    
     drawWindow()
 
 pygame.quit()
