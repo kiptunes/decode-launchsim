@@ -7,10 +7,39 @@ pygame.font.init()
 BLACK = (0, 0, 0)
 GRAY = (100, 100, 100)
 WHITE = (245, 245, 245)
+
+BUTTON_NONE = (180, 180, 180)
+BUTTON_HOVER = (130, 130, 130)
 font1 = pygame.font.SysFont('dejavusansmono', 10)
+font2 = pygame.font.SysFont('dejavusansmono', 12)
 
 class button:
-    pass
+    def __init__(self, x, y, font, label = ''):
+        self.x = x
+        self.y = y
+        self.font = font
+        self.label = label
+        
+    def draw(self, surface):
+        self.surface = surface
+        pos = pygame.mouse.get_pos()
+        label = self.font.render(self.label, True, BLACK)
+        self.label_rect = label.get_rect()
+        self.label_rect.center = (self.x+(self.label_rect[2]+6*2)//2, self.y+20/2)
+        self.butSurf = pygame.Surface((self.label_rect[2]+6*2, 20*1.2))
+        self.butRect = self.butSurf.get_rect()
+        self.butRect.topleft = (self.x, self.y)
+        butSurf = self.butSurf
+
+        if self.butRect.collidepoint(pos):
+            butSurf.fill(BUTTON_HOVER)
+            surface.blit(butSurf, (self.x, self.y))
+            surface.blit(label, self.label_rect)
+        else:
+            butSurf.fill(BUTTON_NONE)
+            surface.blit(self.butSurf, (self.x, self.y))
+            surface.blit(label, self.label_rect)
+
 
 class checkbox:
     def __init__(self, surface, x, y, caption="", font_color=BLACK, checked=False):
@@ -20,13 +49,13 @@ class checkbox:
         self.caption = caption
         self.font_color = font_color
         
-        self.checkbox_rect = pygame.Rect(self.x, self.y, 10, 10)
+        self.checkbox_rect = pygame.Rect(self.x, self.y, 12, 12)
 
         self.checked = False
 
     def _draw_caption(self):
-        self.font_surf = font1.render(self.caption, True, BLACK)
-        w, h = font1.size(self.caption)
+        self.font_surf = font2.render(self.caption, True, BLACK)
+        w, h = font2.size(self.caption)
         self.font_pos = (self.x + 8 + 10, self.y -1)
         self.surface.blit(self.font_surf, self.font_pos)
 

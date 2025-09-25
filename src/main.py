@@ -26,6 +26,7 @@ pygame.display.set_caption('DECODE Launch Simulator')
 pygame.font.init()
 pygame.font.get_init()
 font1 = pygame.font.SysFont('dejavusansmono', 10)
+font2 = pygame.font.SysFont('dejavusansmono', 12)
 
 white, black, light_gray, medium_gray, gray, dark_gray = (245, 245, 245), (0, 0, 0), (220, 220, 220), (200, 200, 200), (150, 150, 150), (120, 120, 120)
 red, pink = (200, 80, 80), (250, 210, 220)
@@ -139,7 +140,7 @@ class menu(object):
         win.blit(self.menuSurf, (self.leftx, self.topy))
         menuRect.topleft = (self.leftx, self.topy)
 
-        title = font1.render(self.title, True, white)
+        title = font2.render(self.title, True, white)
         title_rect = pygame.Rect(menuRect[0]+6, menuRect[1]+5, menuRect[2]-5, menuRect[3])
         title_surf = pygame.Surface((menuRect[2], 24))
         title_surf.fill(divider_color)
@@ -154,15 +155,23 @@ currentVars = menu(gutter, field_length+gutter*2+15, field_length, hWindow-field
 prevVars = menu(field_length+2 +gutter*2, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, gray, 'LAST LAUNCH')
 storedVars = menu(field_length+2 +gutter*3+loadMenu_width, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, gray, 'STORED LAUNCH')
 
-checkbox1 = checkbox(win, currentVars.leftx + 8, currentVars.topy + 40, 'Show trajectory')
-# viTextbox = textbox(win, currentVars.leftx + 8, currentVars.topy + 50, field_length-16, 20, str(vinitial))
-#textinput = pygame_textinput.
+checkbox1 = checkbox(win, currentVars.leftx + 10, currentVars.topy + 34, 'Live update')
+checkbox2 = checkbox(win, currentVars.leftx + 10, hWindow-gutter*2-24-20, 'Show trajectory')
+checkbox3 = checkbox(win, currentVars.leftx + 10, checkbox2.y -20, 'Show vectors')
+
+button_fromGraph = button(currentVars.leftx +80, checkbox2.y + 30, font2, 'LOAD FROM GRAPH')
+button_loadPrev = button(wWindow - loadMenu_width-gutter*2, prevVars.topy, font1, 'LOAD')
+
 
 def drawMenus():
     currentVars.draw(win)
     prevVars.draw(win)
     storedVars.draw(win)
     checkbox1._draw_checkbox()
+    checkbox2._draw_checkbox()
+    checkbox3._draw_checkbox()
+    button_fromGraph.draw(win)
+    button_loadPrev.draw(win)
 
     #win.blit(textinput.surface, (10, 10))
 
@@ -309,17 +318,9 @@ while run:
     if event.type == pygame.MOUSEBUTTONDOWN:
         if event.button == 1:
             checkbox1.update_checkbox()
-
-    # if event.type == pygame.MOUSEBUTTONDOWN and viTextbox.input_rect.collidepoint(pygame.mouse.get_pos()):
-    #     if event.button == 1:
-    #         if not viTextbox.is_active:
-    #             viTextbox.text =''
-    #             viTextbox.is_active = True
-    #             print('hit')
-    #             viTextbox.text_update()
+            checkbox2.update_checkbox()
+            checkbox3.update_checkbox()
                 
-
-
     # moving robot
     if event.type == pygame.KEYDOWN:
         key_pressed_is = pygame.key.get_pressed()
