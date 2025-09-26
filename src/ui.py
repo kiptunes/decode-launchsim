@@ -1,5 +1,5 @@
 import pygame, sys
-#import pygame_textinput
+import pygame_textinput
 
 pygame.init()
 pygame.font.init()
@@ -12,6 +12,7 @@ BUTTON_NONE = (190, 190, 190)
 BUTTON_HOVER = (120, 120, 120)
 font1 = pygame.font.SysFont('dejavusansmono', 10)
 font2 = pygame.font.SysFont('dejavusansmono', 12)
+font3 = pygame.font.SysFont('dejavusansmonobold', 12)
 
 class button:
     def __init__(self, x, y, surfcolor, label = ''):
@@ -92,18 +93,36 @@ class checkbox:
             return False
 
 class textLabel:
-    def __init__(self, x, y, win, text='', font=font2, color=BLACK):
+    def __init__(self, x, y, win, text='', font=font2, color=BLACK, textinput = None, textinput_default = None):
         self.x = x
         self.y = y
         self.win = win
         self.font = font
         self.color = color
+        self.textString = text
+
         self.text = self.font.render(text, True, self.color)
         self.text_rect = self.text.get_rect()
         self.text_rect.topleft = (self.x, self.y)
 
     def draw(self):
         self.win.blit(self.text, self.text_rect)
+        #self.win.blit(textinput.surface, (10, 10))
+
+    # def drawValue(self, value):
+    #     self.value = self.textString + str(value)
+    #     self.text = self.font.render(self.value, True, self.color)
+    #     self.text_rect = self.text.get_rect()
+    #     self.text_rect.topleft = (self.x, self.y)
+    #     self.win.blit(self.text, self.text_rect)
+
+    def drawValue(self, value):
+        self.win.blit(self.text, self.text_rect)
+        self.value = str(value)
+        self.valuetext = font2.render(self.value, True, self.color)
+        self.valuetext_rect = self.valuetext.get_rect()
+        self.valuetext_rect = self.text_rect.topright
+        self.win.blit(self.valuetext, self.valuetext_rect)
 
 
 class textbox:

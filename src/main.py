@@ -17,6 +17,7 @@ STEP = 10 * CM  # 10 pixels per 0.1 meter
 DRAW_MESSAGE = pygame.USEREVENT + 0
 CLEAR_MESSAGE = pygame.USEREVENT + 1
 
+landed = False
 flipped = False
 goalScored = False
 backboard_hit = False
@@ -109,8 +110,19 @@ class ball(object):
 
                 newx = round(xdist + xinitial)
                 newy = round(yinitial - ydist)
+            elif hit_left and flipped:
+                x_prev = artifact.x
+                angle = math.radians(angle)
+                xvel = (vinitial * math.cos(angle))*COR
+                yivel = vinitial * math.sin(angle)
+                yfvel = (yivel*time + (g * (time)**2)/2)
+                curang = math.atan(yfvel/xvel)    
+
+                xdist = xvel * 0.015
+                ydist = ((yivel * time) + ((g * (time)**2)/2))
+                newx = round(x_prev + xdist)
+                newy = round(yinitial - ydist)
             elif hit_left:
-                print('working')
                 x_prev = artifact.x
                 angle = math.radians(angle)
                 xvel = (vinitial * math.cos(angle))*(-1)*COR
@@ -122,6 +134,7 @@ class ball(object):
                 ydist = ((yivel * time) + ((g * (time)**2)/2))
                 newx = round(x_prev + xdist)
                 newy = round(yinitial - ydist)
+                print(newx, xdist)
             else:
                 x_prev = artifact.x
                 angle = math.radians(angle)
@@ -187,7 +200,7 @@ class menu(object):
         menuRect.topleft = (self.leftx, self.topy)
 
         title = font2.render(self.title, True, white)
-        title_rect = pygame.Rect(menuRect[0]+6, menuRect[1]+5, menuRect[2]-5, menuRect[3])
+        title_rect = pygame.Rect(menuRect[0]+6, menuRect[1]+7, menuRect[2]-5, menuRect[3])
         title_surf = pygame.Surface((menuRect[2], 24))
         title_surf.fill(divider_color)
 
@@ -211,20 +224,25 @@ storedVars = menu(field_length+2 +gutter*3+loadMenu_width, hWindow - gutter - lo
 keysMenu = menu(wWindow - gutter - field_length, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, bg_color, '')
 goalRect = pygame.Rect(wWindow-gutter*2-goal_width+3, FLOOR - goal_height, goal_width, goal_height)
 
-label_miniField = textLabel(gutter, gutter + field_length + 2, win, 'Overhead Preview', font1)
+label_miniField = textLabel(gutter, gutter + field_length + 2, win, 'Overhead Preview', font2)
 label_warning = textLabel(gutter, field_length + gutter + 16, win, f'{'WARNING: Invalid launch ':>34}', font1, red)
+
+curValues_list = ['', '', '', '']
+prevValues_list = ['', '', '', '']
+storedValues_list = ['', '', '', '']
 
 label_curvar_vi = textLabel(currentVars.leftx + 10, currentVars.topy + 34, win, 'vᵢ (m/s²): ')
 label_curvar_angle = textLabel(currentVars.leftx + 10, label_curvar_vi.y+20, win, 'angle (degrees): ')
 label_curvar_xdist = textLabel(currentVars.leftx+10, label_curvar_angle.y +20, win, 'cm from goal: ')
 label_curvar_time = textLabel(currentVars.leftx+10, label_curvar_xdist.y +20, win, 'flight time (s): ')
+label_curvar_COR = textLabel(currentVars.leftx+10, label_curvar_time.y + 20, win, 'e: ')
 
 label_stvar_vi = textLabel(storedVars.leftx + 10, storedVars.topy + 28, win, 'vᵢ (m/s²): ')
 label_stvar_angle = textLabel(storedVars.leftx + 10, label_stvar_vi.y+20, win, 'angle (degrees): ')
 label_stvar_xdist = textLabel(storedVars.leftx+10, label_stvar_angle.y +20, win, 'cm from goal: ')
 label_stvar_time = textLabel(storedVars.leftx+10, label_stvar_xdist.y +20, win, 'flight time (s): ')
 
-label_prvar_vi = textLabel(prevVars.leftx + 10, prevVars.topy + 28, win, 'vᵢ (m/s²): ')
+label_prvar_vi = textLabel(prevVars.leftx + 10, prevVars.topy + 28, win, 'velocity (m/s²): ')
 label_prvar_angle = textLabel(prevVars.leftx + 10, label_prvar_vi.y+20, win, 'angle (degrees): ')
 label_prvar_xdist = textLabel(prevVars.leftx+10, label_prvar_angle.y +20, win, 'cm from goal: ')
 label_prvar_time = textLabel(prevVars.leftx+10, label_prvar_xdist.y +20, win, 'flight time (s): ')
@@ -243,6 +261,23 @@ button_fromGraph = button(currentVars.leftx +95, checkbox_liveup.y +24, currentV
 button_loadPrev = button(wWindow - loadMenu_width-gutter*2+1, prevVars.topy+3, divider_color, 'LOAD')
 button_loadStored = button(wWindow - loadMenu_width*2-gutter*3+1, prevVars.topy+3, divider_color, 'LOAD')
 
+def prevValues(vinitial, launchAngle):
+    u = vinitial/CM/100
+    ang = launchAngle
+    xv = round(u*math.cos(ang))
+    yv = round(u*math.sin(ang))
+    distance = round(prevValues_list[2]/CM, 2)
+    flight_time = round(((yv+math.sqrt(yv**2+2*(-g)*(robot.width))))/(-g), 4)
+    return [u, ang, distance, flight_time]
+
+def storeValues(vinitial, launchAngle):
+    u = vinitial/CM/100
+    ang = launchAngle
+    xv = round(u*math.cos(ang))
+    yv = round(u*math.sin(ang))
+    distance = round(storedValues_list[2]/CM, 2)
+    flight_time = round(((yv+math.sqrt(yv**2+2*(-g)*(robot.width))))/(-g), 4)
+    return [u, ang, distance, flight_time]
 
 def drawMenus():
     currentVars.draw(win)
@@ -260,11 +295,17 @@ def drawMenus():
     label_stvar_angle.draw()
     label_stvar_xdist.draw()
     label_stvar_time.draw()
-
-    label_prvar_vi.draw()
-    label_prvar_angle.draw()
-    label_prvar_xdist.draw()
-    label_prvar_time.draw()
+    
+    if landed:
+        label_prvar_vi.drawValue(prevValues_list[0])
+        label_prvar_angle.drawValue(prevValues_list[1])
+        label_prvar_xdist.drawValue(prevValues_list[2])
+        label_prvar_time.drawValue(prevValues_list[3])
+    else:
+        label_prvar_vi.draw()
+        label_prvar_angle.draw()
+        label_prvar_xdist.draw()
+        label_prvar_time.draw()
 
     label_keys_updown.draw()
     label_keys_rightleft.draw()
@@ -419,15 +460,16 @@ def drawWindow():
     if minipos[2] == False:
         pygame.draw.rect(win, red_gray, label_warning.text_rect)
         label_warning.draw()
-    # goal
-    pygame.draw.rect(win, teamRed, goalRect)
-    pygame.draw.line(win, teamRed, (wWindow-gutter*2-1, FLOOR-2), (wWindow-gutter*2-1, FLOOR - goal_backboard), 4)
 
     # moving objects
     artifact.draw(win)
     robot.draw(win)
     shooter.draw(win)
     robot.draw_chute(win, launchAngle)
+
+    # goal
+    pygame.draw.rect(win, teamRed, goalRect)
+    pygame.draw.line(win, teamRed, (wWindow-gutter*2-1, FLOOR-2), (wWindow-gutter*2-1, FLOOR - goal_backboard), 4)
 
     if launch:
         if checkbox_showvec.is_checked():
@@ -512,44 +554,44 @@ while run:
                 checkbox_showvec.update_checkbox()
 
         if event.type == DRAW_MESSAGE:
-            print('drawn')
             goalScored = True
         if event.type == CLEAR_MESSAGE:
-            print('cleared')
             goalScored = False
             pygame.time.set_timer(DRAW_MESSAGE, 0)
             pygame.time.set_timer(CLEAR_MESSAGE, 0)
 
     if launch:
+        landed = False
+        prevValues_list[2] = (wWindow-gutter*2+3)-(robot.x+robot_width)
         if artifact.y < FLOOR - artifact.radius+1:
             time += 0.015
             if artifact.x - artifact_radius < wWindow - maxdist - 37:
-                print('hit left wall')
+                # hit left wall
                 hit_left = True
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
             elif artifact.x+artifact_radius > wWindow - gutter-18 and artifact.y + artifact_radius <= FLOOR - goal_backboard:
-                print('hit right wall')
+                # hit right wall
                 flipped = True
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
             elif not backboard_hit and artifact.x+artifact_radius > wWindow - gutter-23 and artifact.y + artifact_radius+2 <= FLOOR - goal_height+20 and artifact.y + artifact.radius > FLOOR - goal_backboard:
-                print('hit backboard')
+                # hit backboard
                 flipped = True
                 backboard_hit = True
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
-            elif backboard_hit and artifact.x - 3 > goalRect.left:
-                print('hit backboard and returning')
+            elif backboard_hit and artifact.x <= goalRect.left + artifact_radius:
+                # hit backboard and returning
                 hit_left = True
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
             elif artifact.y - artifact_radius < -100:
-                print('hit ceiling')
+                # hit 'ceiling'
                 artifact.y = FLOOR - artifact.radius
                 flipped = False
                 hit_left = False
@@ -557,13 +599,13 @@ while run:
                 launch = False
                 time = 0
             elif not backboard_hit and goalRect.collidepoint(artifact.x + artifact_radius, artifact.y+artifact_radius-2) and artifact.x + artifact_radius < wWindow - gutter - goal_width:
-                print('goal hit')
+                # goal hit from side
                 flipped = True
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
-            elif goalRect.collidepoint(artifact.x+2, artifact.y-artifact_radius-2) and artifact.x + artifact_radius >= wWindow - gutter - goal_width:
-                print('goal scored')
+            elif goalRect.collidepoint(artifact.x+2, artifact.y-artifact_radius-10) and artifact.x + artifact_radius >= wWindow - gutter - goal_width:
+                # goal scored
                 pygame.time.set_timer(DRAW_MESSAGE, 199)
                 pygame.time.set_timer(CLEAR_MESSAGE, 1000)
                 artifact.y = FLOOR - artifact.radius
@@ -572,11 +614,15 @@ while run:
                 backboard_hit = False
                 flipped = False
                 time = 0
+                landed = True
+                prevValues_list = prevValues(vinitial, launchAngle)
             else:
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
         else:
+            prevValues_list = prevValues(vinitial, launchAngle)
+            landed = True
             launch = False
             time = 0
             flipped = False
