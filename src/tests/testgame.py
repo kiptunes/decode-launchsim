@@ -5,6 +5,7 @@ white, black, gray, red = (255, 255, 255), (0, 0, 0), (120, 120, 120), (250, 50,
 
 win = pygame.display.set_mode((wWindow, hWindow))
 pygame.display.set_caption('Projectile Motion')
+pxarray = pygame.PixelArray(win)
 # pygame.display.set_icon(pass)
 
 class ball(object):
