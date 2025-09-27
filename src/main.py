@@ -1,18 +1,24 @@
+# pip install pygame
+# pip install pygame-textinput 
+# ^ to download other requirements
+
 import pygame, sys, math
 from ui import *
 import copy
 #import pygame_textinput
 
+CM = 1.5
+vinitial = 600 # <- edit this to be velocity in cm/s
+vinitial *= CM # <-- converting to pixels
 
 wWindow, hWindow = 960, 540
-bg_color = (110, 110, 110)
+bg_color = (100, 100, 100)
 gutter = 20
 
 clock = pygame.time.Clock()
 framerate = 60
 
 FLOOR = 340
-CM = 1.5
 STEP = 10 * CM  # 10 pixels per 0.1 meter
 DRAW_MESSAGE = pygame.USEREVENT + 0
 CLEAR_MESSAGE = pygame.USEREVENT + 1
@@ -26,10 +32,11 @@ hit_left = False
 time = 0
 g = -9.8 *100*CM# px/s^2
 # 9.8 m/s^2 = (9.8*100) cm/s^2 
-COR = 0.5 # coefficient of restitution
+COR = 0.6 # coefficient of restitution
 vinitial = 600 * CM # px/s
 launchAngle = 45 
 trajecVis = False
+liveUpdate = True
 
 minipos = 'VALID'
 
@@ -41,7 +48,7 @@ pygame.font.get_init()
 font1 = pygame.font.SysFont('dejavusansmono', 10)
 font2 = pygame.font.SysFont('dejavusansmono', 12)
 
-white, black, light_gray, medium_gray, gray, dark_gray = (245, 245, 245), (0, 0, 0), (220, 220, 220), (200, 200, 200), (150, 150, 150), (120, 120, 120)
+white, black, light_gray, medium_gray, gray, dark_gray = (255, 255, 255), (0, 0, 0), (220, 220, 220), (200, 200, 200), (150, 150, 150), (120, 120, 120)
 red, pink, red_gray, green_gray = (60, 0, 0), (250, 210, 220), (142,95,97), (109,150,103)
 teamRed, teamBlue = (220, 60, 60), (60, 60, 220)
 purple, green = (160, 40, 200), (80, 200, 100)
@@ -224,60 +231,66 @@ storedVars = menu(field_length+2 +gutter*3+loadMenu_width, hWindow - gutter - lo
 keysMenu = menu(wWindow - gutter - field_length, hWindow - gutter - loadMenu_height, loadMenu_width, loadMenu_height, bg_color, '')
 goalRect = pygame.Rect(wWindow-gutter*2-goal_width+3, FLOOR - goal_height, goal_width, goal_height)
 
-label_miniField = textLabel(gutter, gutter + field_length + 2, win, 'Overhead Preview', font2)
-label_warning = textLabel(gutter, field_length + gutter + 16, win, f'{'WARNING: Invalid launch ':>34}', font1, red)
+label_miniField = textLabel(gutter, gutter + field_length + 2, win, 'Overhead Preview', False, font2)
+label_warning = textLabel(gutter, field_length + gutter + 16, win, f'{'WARNING: Invalid launch ':>34}', False, font1, red)
 
-curValues_list = ['', '', '', '']
-prevValues_list = ['', '', '', '']
-storedValues_list = ['', '', '', '']
+curValues_list = ['', '', '']
+prevValues_list = [6, 45, 365]
+storedValues_list = [6, 45, 365]
 
-label_curvar_vi = textLabel(currentVars.leftx + 10, currentVars.topy + 34, win, 'vᵢ (m/s²): ')
-label_curvar_angle = textLabel(currentVars.leftx + 10, label_curvar_vi.y+20, win, 'angle (degrees): ')
-label_curvar_xdist = textLabel(currentVars.leftx+10, label_curvar_angle.y +20, win, 'cm from goal: ')
-label_curvar_time = textLabel(currentVars.leftx+10, label_curvar_xdist.y +20, win, 'flight time (s): ')
-label_curvar_COR = textLabel(currentVars.leftx+10, label_curvar_time.y + 20, win, 'e: ')
+label_curvar_vi = textLabel(currentVars.leftx + 10, currentVars.topy + 34, win, 'velocity (m/s²): ', True)
+label_curvar_angle = textLabel(currentVars.leftx + 10, label_curvar_vi.y+20, win, 'angle (degrees): ', True)
+label_curvar_xdist = textLabel(currentVars.leftx+10, label_curvar_angle.y +20, win, 'cm from goal: ', True)
 
-label_stvar_vi = textLabel(storedVars.leftx + 10, storedVars.topy + 28, win, 'vᵢ (m/s²): ')
+textbox_vi = textbox(label_curvar_vi.text_rect.right, label_curvar_vi.text_rect.top, win, str(vinitial/100/CM))
+textbox_ang = textbox(label_curvar_angle.text_rect.right, label_curvar_angle.text_rect.top, win, str(launchAngle))
+textbox_dist = textbox(label_curvar_xdist.text_rect.right, label_curvar_xdist.text_rect.top, win, '365')
+
+label_stvar_vi = textLabel(storedVars.leftx + 10, storedVars.topy + 28, win, 'velocity (m/s²): ')
 label_stvar_angle = textLabel(storedVars.leftx + 10, label_stvar_vi.y+20, win, 'angle (degrees): ')
 label_stvar_xdist = textLabel(storedVars.leftx+10, label_stvar_angle.y +20, win, 'cm from goal: ')
-label_stvar_time = textLabel(storedVars.leftx+10, label_stvar_xdist.y +20, win, 'flight time (s): ')
 
 label_prvar_vi = textLabel(prevVars.leftx + 10, prevVars.topy + 28, win, 'velocity (m/s²): ')
 label_prvar_angle = textLabel(prevVars.leftx + 10, label_prvar_vi.y+20, win, 'angle (degrees): ')
 label_prvar_xdist = textLabel(prevVars.leftx+10, label_prvar_angle.y +20, win, 'cm from goal: ')
-label_prvar_time = textLabel(prevVars.leftx+10, label_prvar_xdist.y +20, win, 'flight time (s): ')
 
 label_keys_updown = textLabel(keysMenu.leftx+5, keysMenu.topy+5, win, f'UP/DOWN{'change angle':>21}')
 label_keys_rightleft = textLabel(keysMenu.leftx+5, label_keys_updown.y+20, win, f'LEFT/RIGHT{'change position':>18}')
 label_keys_space = textLabel(keysMenu.leftx+5, label_keys_rightleft.y+20, win, f'SPACE{'launch':>23}')
 label_keys_goal = textLabel(keysMenu.leftx+5, label_keys_space.y+40, win, f'{'Nice shot! :-)':28}')
 
-checkbox_showtrajec = checkbox(win, currentVars.leftx + 10, label_curvar_time.y + 78, 'Show trajectory')
+checkbox_showtrajec = checkbox(win, currentVars.leftx + 10, label_curvar_xdist.y + 98, 'Show trajectory')
 checkbox_showvec = checkbox(win, currentVars.leftx + 10, checkbox_showtrajec.y +20, 'Show vectors')
-checkbox_liveup = checkbox(win, currentVars.leftx + 10, checkbox_showvec.y +20, 'Live update')
+checkbox_liveup = checkbox(win, currentVars.leftx + 10, checkbox_showvec.y +20, 'Live update', black, True)
 
 button_storeValues = button(currentVars.leftx+10, checkbox_liveup.y+24, currentVars.color, 'STORE')
 button_fromGraph = button(currentVars.leftx +95, checkbox_liveup.y +24, currentVars.color, 'LOAD FROM GRAPH')
-button_loadPrev = button(wWindow - loadMenu_width-gutter*2+1, prevVars.topy+3, divider_color, 'LOAD')
-button_loadStored = button(wWindow - loadMenu_width*2-gutter*3+1, prevVars.topy+3, divider_color, 'LOAD')
+button_loadStored = button(wWindow - loadMenu_width-gutter*2+1, prevVars.topy+3, divider_color, 'LOAD')
+button_loadPrev = button(wWindow - loadMenu_width*2-gutter*3+1, prevVars.topy+3, divider_color, 'LOAD')
 
 def prevValues(vinitial, launchAngle):
     u = vinitial/CM/100
     ang = launchAngle
     xv = round(u*math.cos(ang))
     yv = round(u*math.sin(ang))
-    distance = round(prevValues_list[2]/CM, 2)
-    flight_time = round(((yv+math.sqrt(yv**2+2*(-g)*(robot.width))))/(-g), 4)
-    return [u, ang, distance, flight_time]
+    distance = round(prevValues_list[2]/CM)
+    return [u, ang, distance]
 
 def storeValues(vinitial, launchAngle):
     u = vinitial/CM/100
     ang = launchAngle
     xv = round(u*math.cos(ang))
     yv = round(u*math.sin(ang))
-    distance = round(storedValues_list[2]/CM, 2)
-    flight_time = round(((yv+math.sqrt(yv**2+2*(-g)*(robot.width))))/(-g), 4)
-    return [u, ang, distance, flight_time]
+    distance = round(storedValues_list[2]/CM)
+    return [u, ang, distance]
+
+def curValues(vinitial, launchAngle):
+    u = vinitial/CM/100
+    ang = launchAngle
+    xv = round(u*math.cos(ang))
+    yv = round(u*math.sin(ang))
+    distance = round(curValues_list[2]/CM)
+    return [u, ang, distance]
 
 def drawMenus():
     currentVars.draw(win)
@@ -286,26 +299,64 @@ def drawMenus():
     
     label_miniField.draw()
 
-    label_curvar_vi.draw()
-    label_curvar_angle.draw()
-    label_curvar_xdist.draw()
-    label_curvar_time.draw()
+    if textbox_vi.enter:
+        print(textbox_vi.visualizer.value)
+        curvel = float(textbox_vi.visualizer.value)*CM*100
+        global vinitial 
+        global launchAngle
+        vinitial = curvel
+        label_curvar_vi.drawValue(textbox_vi.visualizer.value)
 
-    label_stvar_vi.draw()
-    label_stvar_angle.draw()
-    label_stvar_xdist.draw()
-    label_stvar_time.draw()
-    
+    if button_fromGraph.clicked and not checkbox_liveup.is_checked():
+        label_curvar_vi.drawValue(curValues_list[0])
+        label_curvar_angle.drawValue(curValues_list[1])
+        label_curvar_xdist.drawValue(curValues_list[2])
+    elif button_loadPrev.clicked:
+        global launchAngle
+        vinitial = int(prevValues_list[0])*CM*100
+        launchAngle = int(prevValues_list[1])
+        robot.x = -(int(prevValues_list[2])*CM +robot_width - (wWindow-gutter*2+3))
+        label_curvar_vi.drawValue(prevValues_list[0])
+        label_curvar_angle.drawValue(prevValues_list[1])
+        label_curvar_xdist.drawValue(prevValues_list[2])
+        button_loadPrev.clicked = False
+    elif button_loadStored.clicked:
+        vinitial = int(storedValues_list[0])*CM*100
+        launchAngle = int(storedValues_list[1])
+        robot.x = -(int(storedValues_list[2])*CM +robot_width - (wWindow-gutter*2+3))
+        label_curvar_vi.drawValue(storedValues_list[0])
+        label_curvar_angle.drawValue(storedValues_list[1])
+        label_curvar_xdist.drawValue(storedValues_list[2])
+        button_loadStored.clicked = False
+    elif checkbox_liveup.is_checked():
+        curvel = vinitial/CM/100
+        distpx = (wWindow-gutter*2+3)-(robot.x+robot_width)
+        curdist = round(distpx/CM)
+        label_curvar_vi.drawValue(curvel)
+        label_curvar_angle.drawValue(launchAngle)
+        label_curvar_xdist.drawValue(curdist)
+    else:
+        label_curvar_vi.draw()
+        label_curvar_angle.draw()
+        label_curvar_xdist.draw()
+
+    if button_storeValues.clicked:
+        label_stvar_vi.drawValue(storedValues_list[0])
+        label_stvar_angle.drawValue(storedValues_list[1])
+        label_stvar_xdist.drawValue(storedValues_list[2])
+    else: 
+        label_stvar_vi.draw()
+        label_stvar_angle.draw()
+        label_stvar_xdist.draw()
+        
     if landed:
         label_prvar_vi.drawValue(prevValues_list[0])
         label_prvar_angle.drawValue(prevValues_list[1])
         label_prvar_xdist.drawValue(prevValues_list[2])
-        label_prvar_time.drawValue(prevValues_list[3])
     else:
         label_prvar_vi.draw()
         label_prvar_angle.draw()
         label_prvar_xdist.draw()
-        label_prvar_time.draw()
 
     label_keys_updown.draw()
     label_keys_rightleft.draw()
@@ -357,6 +408,10 @@ def drawMenus():
     button_fromGraph.draw(win)
     button_loadPrev.draw(win)
     button_loadStored.draw(win)
+
+    textbox_vi.draw()
+    textbox_ang.draw()
+    textbox_dist.draw()
 
 
 def drawField():
@@ -477,23 +532,23 @@ def drawWindow():
             y = shot[1]
             xvel = shot[2]/5
             yvel = shot [3]/5
-            pygame.draw.line(win, black, (x, y), (x+xvel//CM, y))
+            pygame.draw.line(win, dark_gray, (x, y), (x+xvel//CM, y))
             if xvel > 0:
-                pygame.draw.line(win, black, (x+xvel//CM, y), (x+xvel//CM -5, y + 3))
-                pygame.draw.line(win, black, (x+xvel//CM, y), (x+xvel//CM -5, y - 3))
+                pygame.draw.line(win, dark_gray, (x+xvel//CM, y), (x+xvel//CM -5, y + 3))
+                pygame.draw.line(win, dark_gray, (x+xvel//CM, y), (x+xvel//CM -5, y - 3))
             else:
-                pygame.draw.line(win, black, (x+xvel//CM, y), (x+xvel//CM +5, y + 3))
-                pygame.draw.line(win, black, (x+xvel//CM, y), (x+xvel//CM +5, y - 3))
+                pygame.draw.line(win, dark_gray, (x+xvel//CM, y), (x+xvel//CM +5, y + 3))
+                pygame.draw.line(win, dark_gray, (x+xvel//CM, y), (x+xvel//CM +5, y - 3))
 
-            pygame.draw.line(win, black, (x, y), (x, y+ yvel//CM))
+            pygame.draw.line(win, dark_gray, (x, y), (x, y+ yvel//CM))
             if yvel > 0:
-                pygame.draw.line(win, black, (x, y+ yvel//CM), (x +3, y+ yvel//CM - 5))
-                pygame.draw.line(win, black, (x, y+ yvel//CM), (x -3, y+ yvel//CM - 5))
-            else:              
-                pygame.draw.line(win, black, (x, y+ yvel//CM), (x +3, y+ yvel//CM + 5))
-                pygame.draw.line(win, black, (x, y+ yvel//CM), (x -3, y+ yvel//CM + 5))
+                pygame.draw.line(win, dark_gray, (x, y+ yvel//CM), (x +3, y+ yvel//CM - 5))
+                pygame.draw.line(win, dark_gray, (x, y+ yvel//CM), (x -3, y+ yvel//CM - 5))
+            else:         
+                pygame.draw.line(win, dark_gray, (x, y+ yvel//CM), (x +3, y+ yvel//CM + 5))
+                pygame.draw.line(win, dark_gray, (x, y+ yvel//CM), (x -3, y+ yvel//CM + 5))
 
-            pygame.draw.line(win, black, (x, y), (x +xvel//CM, y+yvel//CM))
+            pygame.draw.line(win, dark_gray, (x, y), (x +xvel//CM, y+yvel//CM))
 
     #menus
     drawMenus()
@@ -506,6 +561,8 @@ while run:
     
     events = pygame.event.get()
     
+    textbox_vi.visualizer.update(events)
+
     key_pressed_is = pygame.key.get_pressed()
     if key_pressed_is[pygame.K_LEFT]:
         robot.x -= CM
@@ -539,10 +596,20 @@ while run:
                     artifact.y = shooter.y
                     x = artifact.x
                     y = artifact.y
+            
+            # curvel = vinitial/CM/100
+            # distpx = (wWindow-gutter*2+3)-(robot.x+robot_width)
+            # curdist = round(distpx/CM)
+            # textbox_vi.update(event, curvel)
+            # textbox_ang.update(event, launchAngle)
+            # textbox_dist.update(event, curdist)
         
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 checkbox_liveup.update_checkbox()
+                if not checkbox_liveup.is_checked():
+                    liveUpdate = False
+                button_fromGraph.clicked = False
                 checkbox_showtrajec.update_checkbox()
                 if checkbox_showtrajec.is_checked():
                     if not trajecVis:
@@ -552,6 +619,36 @@ while run:
                 else:
                     trajecVis = False
                 checkbox_showvec.update_checkbox()
+
+                if button_storeValues.butRect.collidepoint(pygame.mouse.get_pos()):
+                    button_storeValues.clicked = True
+                    storedValues_list[2] = (wWindow-gutter*2+3)-(robot.x+robot_width)
+                    storedValues_list = storeValues(vinitial, launchAngle)
+                
+                if button_fromGraph.butRect.collidepoint(pygame.mouse.get_pos()):
+                    button_fromGraph.clicked = True
+                    curValues_list[2] = (wWindow-gutter*2+3)-(robot.x+robot_width)
+                    curValues_list = curValues(vinitial, launchAngle)
+                
+                if button_loadPrev.butRect.collidepoint(pygame.mouse.get_pos()):
+                    button_loadPrev.clicked = True
+
+                if button_loadStored.butRect.collidepoint(pygame.mouse.get_pos()):
+                    button_loadStored.clicked = True
+
+                # if label_curvar_vi.textbox_rect.collidepoint(pygame.mouse.get_pos()):
+                #     textbox_vi.state = 'HIGHLIGHTED'
+                #     textbox_ang.state = 'DEFAULT'
+                #     textbox_dist.state = 'DEFAULT'
+                # if label_curvar_angle.textbox_rect.collidepoint(pygame.mouse.get_pos()):
+                #     textbox_ang.state = 'HIGHLIGHTED'
+                #     textbox_vi.state = 'DEFAULT'
+                #     textbox_dist.state = 'DEFAULT'
+                # if label_curvar_xdist.textbox_rect.collidepoint(pygame.mouse.get_pos()):
+                #     textbox_dist.state = 'HIGHLIGHTED'
+                #     textbox_vi.state = 'DEFAULT'
+                #     textbox_ang.state = 'DEFAULT'
+                
 
         if event.type == DRAW_MESSAGE:
             goalScored = True
@@ -577,7 +674,7 @@ while run:
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
-            elif not backboard_hit and artifact.x+artifact_radius > wWindow - gutter-23 and artifact.y + artifact_radius+2 <= FLOOR - goal_height+20 and artifact.y + artifact.radius > FLOOR - goal_backboard:
+            elif not backboard_hit and artifact.x+artifact_radius > wWindow - gutter-23 and artifact.y + artifact_radius+2 <= FLOOR - goal_height+30 and artifact.y + artifact.radius > FLOOR - goal_backboard:
                 # hit backboard
                 flipped = True
                 backboard_hit = True
@@ -629,8 +726,5 @@ while run:
             hit_left = False
             backboard_hit = False
             artifact.y = FLOOR - artifact.radius
-        
-        # if goalScored:
-        #     label_keys_goal.draw()
 
 pygame.quit()

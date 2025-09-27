@@ -7,6 +7,7 @@ pygame.font.init()
 BLACK = (0, 0, 0)
 GRAY = (100, 100, 100)
 WHITE = (245, 245, 245)
+BLUE = (50, 50, 100)
 
 BUTTON_NONE = (190, 190, 190)
 BUTTON_HOVER = (120, 120, 120)
@@ -61,7 +62,7 @@ class checkbox:
         
         self.checkbox_rect = pygame.Rect(self.x, self.y, 12, 12)
 
-        self.checked = False
+        self.checked = checked
 
     def _draw_caption(self):
         self.font_surf = font2.render(self.caption, True, BLACK)
@@ -71,7 +72,8 @@ class checkbox:
 
     def _draw_checkbox(self):
         if self.is_checked():
-            pygame.draw.rect(self.surface, GRAY, self.checkbox_rect)
+            pygame.draw.rect(self.surface, WHITE, self.checkbox_rect)
+            pygame.draw.circle(self.surface, GRAY, (self.x+6, self.y+6), 4)
             pygame.draw.rect(self.surface, BLACK, self.checkbox_rect, 1)
         elif not self.is_checked():
             pygame.draw.rect(self.surface, WHITE, self.checkbox_rect)
@@ -93,10 +95,11 @@ class checkbox:
             return False
 
 class textLabel:
-    def __init__(self, x, y, win, text='', font=font2, color=BLACK, textinput = None, textinput_default = None):
+    def __init__(self, x, y, win, text='', editable = False, font=font2, color=BLACK, textinput = None, textinput_default = None):
         self.x = x
         self.y = y
         self.win = win
+        self.editable = editable
         self.font = font
         self.color = color
         self.textString = text
@@ -106,27 +109,65 @@ class textLabel:
         self.text_rect.topleft = (self.x, self.y)
 
     def draw(self):
+        if self.editable:
+            self.textbox_rect = pygame.Rect(self.text_rect.right -4, self.text_rect.top, 50, 16)
+            pygame.draw.rect(self.win, WHITE, self.textbox_rect)
+            pygame.draw.rect(self.win, BLACK, self.textbox_rect, 1)
         self.win.blit(self.text, self.text_rect)
-        #self.win.blit(textinput.surface, (10, 10))
-
-    # def drawValue(self, value):
-    #     self.value = self.textString + str(value)
-    #     self.text = self.font.render(self.value, True, self.color)
-    #     self.text_rect = self.text.get_rect()
-    #     self.text_rect.topleft = (self.x, self.y)
-    #     self.win.blit(self.text, self.text_rect)
-
+    
     def drawValue(self, value):
-        self.win.blit(self.text, self.text_rect)
         self.value = str(value)
         self.valuetext = font2.render(self.value, True, self.color)
         self.valuetext_rect = self.valuetext.get_rect()
-        self.valuetext_rect = self.text_rect.topright
+        self.valuetext_rect.topleft = (self.text_rect.right, self.text_rect.top)
+        if self.editable:
+            self.textbox_rect = pygame.Rect(self.text_rect.right -4, self.text_rect.top, 50, 16)
+            pygame.draw.rect(self.win, WHITE, self.textbox_rect)
+            pygame.draw.rect(self.win, BLACK, self.textbox_rect, 1)
+        self.win.blit(self.text, self.text_rect)
         self.win.blit(self.valuetext, self.valuetext_rect)
 
 
 class textbox:
-    pass
+    def __init__(self, x, y, win, visualizer, value = '', enter = False):
+        self.x = x
+        self.y = y
+        self.win = win
+        self.visualizer = pygame_textinput.TextInputVisualizer()
+        self.value = value
+        self.state = 'DEFAULT'
+        self.enter = enter
+
+        self.visualizer._font_object = font2
+        self.visualizer.cursor_width = 1
+        self.rect = self.visualizer.surface.get_rect()
+        self.rect.topleft = (self.x, self.y)
+        self.visualizer.value = value
+    
+    def draw(self):
+        if self.state == 'DEFAULT':
+            pass
+        elif self.state == 'HIGHLIGHTED':
+            pygame.draw.rect(self.win, WHITE, pygame.Rect(self.x-3, self.y+1, 48, 14))
+            pygame.draw.rect(self.win, BLACK, self.rect)
+            self.win.blit(self.visualizer.surface, self.rect.topleft)
+        elif self.state == 'EDITING':
+            self.visualizer.font_color = BLUE
+            pygame.draw.rect(self.win, WHITE, pygame.Rect(self.x-3, self.y+1, 48, 14))
+            self.win.blit(self.visualizer.surface, self.rect.topleft)
+        else:
+            pass
+    
+    def update(self, event, curvalue = ''):
+        if event.type == pygame.KEYDOWN and self.state == 'HIGHLIGHTED':
+                self.visualizer.value = str(curvalue)
+                self.state = 'EDITING'
+                print('editing')
+        if event.key == pygame.K_RETURN and self.state == 'EDITING':
+            length = len(self.visualizer.value)-1
+            self.visualizer.value = self.visualizer.value[:length]
+            self.state = 'DEFAULT'
+            return self.visualizer.value
 
 # class textbox:
 #     def __init__(self, surface, x, y, length, height, text =''):
