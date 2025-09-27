@@ -1,6 +1,5 @@
 # pip install pygame
 # pip install pygame-textinput 
-# ^ to download other requirements
 
 import pygame, sys, math
 from ui import *
