@@ -1,8 +1,8 @@
 # decode-launchsim
 A simple projectile motion simulator specifically for FTC DECODE 2024.
 
-## FAQ
-===========
-Q: Why's it so bad/ Why did you do it so bad/ How are you so bad
-A: pyton is my passion
+requirements
+pygame, pygame-textinput
+
+text input currently DOES NOT WORK and there is no in-program way to change initial velocity so that has to be done IN THE CODE. It is entered initially in CM/S. It is one of the first lines of the code for ease of access. sorry!
 
