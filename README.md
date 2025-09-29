@@ -11,7 +11,7 @@ A projectile motion simulator specifically for FTC DECODE 2024.
 
 - if requirements are broken try:\
 `pip install pygame`\
-`pip install pygame-input`
+`pip install pygame-textinput`
 
 <br>Thank you for visiting/downloading! ^_^
 <br><br>If you have other issues I would be happy to revisit this code but as you can probably tell this was my first time using python and it's so comically bad I'm not sure I'll be able to fix it without bulldozing a lot of things. Still, any bug reports are appreciated.
