@@ -1,9 +1,7 @@
-# pip install pygame
-# pip install pygame-textinput 
+# I'm so sorry for how this was formatted, I've learned my lesson in the necessity of planning
 
 import pygame, sys, math
 from ui import *
-import copy
 import pygame_textinput
 
 CM = 1.5
@@ -307,7 +305,7 @@ def drawMenus():
             else:
                 curvel = float(textbox_vi.visualizer.value)*CM*100
                 global vinitial 
-                vinitial = curvel
+                vinitial = round(curvel, 3)
         except:
             pass
         textbox_vi.enter = False
@@ -318,7 +316,7 @@ def drawMenus():
                 pass
             else:
                 global launchAngle
-                launchAngle = float(textbox_ang.visualizer.value)
+                launchAngle = round(float(textbox_ang.visualizer.value), 1)
         except:
             pass
         textbox_ang.enter = False
@@ -328,7 +326,7 @@ def drawMenus():
             if float(textbox_dist.visualizer.value) < 0 or float(textbox_dist.visualizer.value) > 365:
                 pass
             else:
-                curval = float(textbox_dist.visualizer.value)
+                curval = round(float(textbox_dist.visualizer.value))
                 robot.x = -(curval*CM +robot_width - (wWindow-gutter*2+3))
         except:
             pass

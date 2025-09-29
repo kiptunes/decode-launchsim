@@ -155,61 +155,12 @@ class textbox:
             pass
     
     def update(self, event):
+        if event.type == pygame.KEYDOWN:
+            if len(self.visualizer.value) > 6:
+                length = len(self.visualizer.value) -1
+                self.visualizer.value = self.visualizer.value[:length]
         if event.key == pygame.K_RETURN and self.state == 'EDITING':
             self.enter = True
             self.state = 'DEFAULT'
             return self.visualizer.value
             self.visualizer.value = ''
-
-# class textbox:
-#     def __init__(self, surface, x, y, length, height, text =''):
-#         self.surface = surface
-#         self.x = x
-#         self.y = y
-#         self.length = length
-#         self.height = height
-#         self.text = text
-#         self.input_rect = pygame.Rect(self.x, self.y, self.length, self.height)
-
-#         self.is_active = False
-
-#     def draw(self, surface):
-#         self.surface = surface
-#         pygame.draw.rect(self.surface, WHITE, self.input_rect)
-#         text_surface = font1.render(self.text, True, BLACK)
-#         surface.blit(text_surface, (self.input_rect.x+5, self.input_rect.y+5))
-#         #self.input_rect.w = max(100, 20)
-    
-
-#     def text_update(self):
-#         while self.is_active:
-#             clock.tick(framerate)
-#             for event in pygame.event.get():
-#                 if event.type == pygame.QUIT:
-#                     self.is_active = False
-#                 if event.type == pygame.KEYDOWN:
-#                     if event.key == pygame.K_ESCAPE:
-#                         self.is_active = False
-                
-#                 if event.type == pygame.KEYDOWN:
-#                     if event.key == pygame.K_BACKSPACE:
-#                         self.draw()
-#                     elif event.key == pygame.K_RETURN:
-#                         print('hit enter')
-#                         self.is_active = False
-#                     elif event.key == pygame.K_ESCAPE:
-                #         self.is_active = False
-                # elif event.type == pygame.MOUSEBUTTONDOWN:
-                #     if not self.input_rect.collidepoint(pygame.mouse.get_pos()):
-                #         print('clicked off textbox')
-                #         self.is_active = False
-                # elif event.type == pygame.QUIT:
-                #     self.is_active = False
-                # elif event.type == pygame.KEYDOWN:
-                #     self.text += event.unicode
-                #     self.draw()
-                
-
-    
-
-
