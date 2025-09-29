@@ -4,7 +4,7 @@
 import pygame, sys, math
 from ui import *
 import copy
-#import pygame_textinput
+import pygame_textinput
 
 CM = 1.5
 vinitial = 600 # <- edit this to be velocity in cm/s
@@ -31,11 +31,13 @@ hit_left = False
 time = 0
 g = -9.8 *100*CM# px/s^2
 # 9.8 m/s^2 = (9.8*100) cm/s^2 
-COR = 0.6 # coefficient of restitution
+COR = 0.6 # coefficient of restitution, set with guesswork, change if needed
 vinitial = 600 * CM # px/s
 launchAngle = 45 
+
 trajecVis = False
 liveUpdate = True
+suppressEvents = False
 
 minipos = 'VALID'
 
@@ -299,19 +301,44 @@ def drawMenus():
     label_miniField.draw()
 
     if textbox_vi.enter:
-        print(textbox_vi.visualizer.value)
-        curvel = float(textbox_vi.visualizer.value)*CM*100
-        global vinitial 
-        global launchAngle
-        vinitial = curvel
-        label_curvar_vi.drawValue(textbox_vi.visualizer.value)
+        try: 
+            if float(textbox_vi.visualizer.value) < 0 or float(textbox_vi.visualizer.value) > 11:
+                pass
+            else:
+                curvel = float(textbox_vi.visualizer.value)*CM*100
+                global vinitial 
+                vinitial = curvel
+        except:
+            pass
+        textbox_vi.enter = False
+    
+    if textbox_ang.enter:
+        try: 
+            if float(textbox_ang.visualizer.value) < 0 or float(textbox_ang.visualizer.value) > 180:
+                pass
+            else:
+                global launchAngle
+                launchAngle = float(textbox_ang.visualizer.value)
+        except:
+            pass
+        textbox_ang.enter = False
+    
+    if textbox_dist.enter:
+        try: 
+            if float(textbox_dist.visualizer.value) < 0 or float(textbox_dist.visualizer.value) > 365:
+                pass
+            else:
+                curval = float(textbox_dist.visualizer.value)
+                robot.x = -(curval*CM +robot_width - (wWindow-gutter*2+3))
+        except:
+            pass
+        textbox_dist.enter = False
 
     if button_fromGraph.clicked and not checkbox_liveup.is_checked():
         label_curvar_vi.drawValue(curValues_list[0])
         label_curvar_angle.drawValue(curValues_list[1])
         label_curvar_xdist.drawValue(curValues_list[2])
     elif button_loadPrev.clicked:
-        global launchAngle
         vinitial = int(prevValues_list[0])*CM*100
         launchAngle = int(prevValues_list[1])
         robot.x = -(int(prevValues_list[2])*CM +robot_width - (wWindow-gutter*2+3))
@@ -360,6 +387,7 @@ def drawMenus():
     label_keys_updown.draw()
     label_keys_rightleft.draw()
     label_keys_space.draw()
+    
     if goalScored:
         pygame.draw.rect(win, green_gray, label_keys_goal.text_rect)
         label_keys_goal.draw()
@@ -561,24 +589,31 @@ while run:
     events = pygame.event.get()
     
     textbox_vi.visualizer.update(events)
+    textbox_ang.visualizer.update(events)
+    textbox_dist.visualizer.update(events)
+    if textbox_vi.state == 'EDITING' or textbox_ang.state == 'EDITING' or textbox_dist.state == 'EDITING':
+        suppressEvents = True
+    else:
+        suppressEvents = False
 
-    key_pressed_is = pygame.key.get_pressed()
-    if key_pressed_is[pygame.K_LEFT]:
-        robot.x -= CM
-        if robot.x < wWindow - maxdist -gutter*2 +1:
-            robot.x = wWindow-maxdist-gutter*2 +1
-    if key_pressed_is[pygame.K_RIGHT]:
-        robot.x += CM
-        if robot.x +robot_width > wWindow-gutter*2-goal_width+.2:
-            robot.x = wWindow-gutter*2-goal_width+3 - robot_width
-    if key_pressed_is[pygame.K_UP]:
-        launchAngle += 1
-        if launchAngle > 180:
-            launchAngle = 180
-    if key_pressed_is[pygame.K_DOWN]:
-        launchAngle -= 1
-        if launchAngle < 1:
-            launchAngle = 1
+    if not suppressEvents:
+        key_pressed_is = pygame.key.get_pressed()
+        if key_pressed_is[pygame.K_LEFT]:
+            robot.x -= CM
+            if robot.x < wWindow - maxdist -gutter*2 +1:
+                robot.x = wWindow-maxdist-gutter*2 +1
+        if key_pressed_is[pygame.K_RIGHT]:
+            robot.x += CM
+            if robot.x +robot_width > wWindow-gutter*2-goal_width+.2:
+                robot.x = wWindow-gutter*2-goal_width+3 - robot_width
+        if key_pressed_is[pygame.K_UP]:
+            launchAngle += 1
+            if launchAngle > 180:
+                launchAngle = 180
+        if key_pressed_is[pygame.K_DOWN]:
+            launchAngle -= 1
+            if launchAngle < 1:
+                launchAngle = 1
     
     for event in events:
         # quit
@@ -588,7 +623,7 @@ while run:
             if event.key == pygame.K_ESCAPE:
                 run = False
             
-            if event.key == pygame.K_SPACE:
+            if event.key == pygame.K_SPACE and not suppressEvents:
                 if not launch:
                     launch = True
                     artifact.x = shooter.x
@@ -596,12 +631,9 @@ while run:
                     x = artifact.x
                     y = artifact.y
             
-            # curvel = vinitial/CM/100
-            # distpx = (wWindow-gutter*2+3)-(robot.x+robot_width)
-            # curdist = round(distpx/CM)
-            # textbox_vi.update(event, curvel)
-            # textbox_ang.update(event, launchAngle)
-            # textbox_dist.update(event, curdist)
+            textbox_vi.update(event)
+            textbox_ang.update(event)
+            textbox_dist.update(event)
         
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
@@ -610,6 +642,7 @@ while run:
                     liveUpdate = False
                 button_fromGraph.clicked = False
                 checkbox_showtrajec.update_checkbox()
+
                 if checkbox_showtrajec.is_checked():
                     if not trajecVis:
                         trajecVis = True
@@ -635,18 +668,26 @@ while run:
                 if button_loadStored.butRect.collidepoint(pygame.mouse.get_pos()):
                     button_loadStored.clicked = True
 
-                # if label_curvar_vi.textbox_rect.collidepoint(pygame.mouse.get_pos()):
-                #     textbox_vi.state = 'HIGHLIGHTED'
-                #     textbox_ang.state = 'DEFAULT'
-                #     textbox_dist.state = 'DEFAULT'
-                # if label_curvar_angle.textbox_rect.collidepoint(pygame.mouse.get_pos()):
-                #     textbox_ang.state = 'HIGHLIGHTED'
-                #     textbox_vi.state = 'DEFAULT'
-                #     textbox_dist.state = 'DEFAULT'
-                # if label_curvar_xdist.textbox_rect.collidepoint(pygame.mouse.get_pos()):
-                #     textbox_dist.state = 'HIGHLIGHTED'
-                #     textbox_vi.state = 'DEFAULT'
-                #     textbox_ang.state = 'DEFAULT'
+                if label_curvar_vi.textbox_rect.collidepoint(pygame.mouse.get_pos()):
+                    textbox_vi.visualizer.value = ''
+                    textbox_vi.state = 'EDITING'
+                    textbox_ang.state = 'DEFAULT'
+                    textbox_dist.state = 'DEFAULT'
+                elif label_curvar_angle.textbox_rect.collidepoint(pygame.mouse.get_pos()):
+                    textbox_ang.visualizer.value = ''
+                    textbox_ang.state = 'EDITING'
+                    textbox_vi.state = 'DEFAULT'
+                    textbox_dist.state = 'DEFAULT'
+                elif label_curvar_xdist.textbox_rect.collidepoint(pygame.mouse.get_pos()):
+                    textbox_dist.visualizer.value = ''
+                    textbox_dist.state = 'EDITING'
+                    textbox_vi.state = 'DEFAULT'
+                    textbox_ang.state = 'DEFAULT'
+                else:
+                    suppressEvents = False
+                    textbox_dist.state = 'DEFAULT'
+                    textbox_vi.state = 'DEFAULT'
+                    textbox_ang.state = 'DEFAULT'
                 
 
         if event.type == DRAW_MESSAGE:
@@ -686,7 +727,7 @@ while run:
                 shot = ball.trajectory(x, y, vinitial, launchAngle, time,win)
                 artifact.x = shot[0]
                 artifact.y = shot[1]
-            elif artifact.y - artifact_radius < -100:
+            elif artifact.y - artifact_radius < 0:
                 # hit 'ceiling'
                 artifact.y = FLOOR - artifact.radius
                 flipped = False

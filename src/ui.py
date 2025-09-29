@@ -147,10 +147,6 @@ class textbox:
     def draw(self):
         if self.state == 'DEFAULT':
             pass
-        elif self.state == 'HIGHLIGHTED':
-            pygame.draw.rect(self.win, WHITE, pygame.Rect(self.x-3, self.y+1, 48, 14))
-            pygame.draw.rect(self.win, BLACK, self.rect)
-            self.win.blit(self.visualizer.surface, self.rect.topleft)
         elif self.state == 'EDITING':
             self.visualizer.font_color = BLUE
             pygame.draw.rect(self.win, WHITE, pygame.Rect(self.x-3, self.y+1, 48, 14))
@@ -158,16 +154,12 @@ class textbox:
         else:
             pass
     
-    def update(self, event, curvalue = ''):
-        if event.type == pygame.KEYDOWN and self.state == 'HIGHLIGHTED':
-                self.visualizer.value = str(curvalue)
-                self.state = 'EDITING'
-                print('editing')
+    def update(self, event):
         if event.key == pygame.K_RETURN and self.state == 'EDITING':
-            length = len(self.visualizer.value)-1
-            self.visualizer.value = self.visualizer.value[:length]
+            self.enter = True
             self.state = 'DEFAULT'
             return self.visualizer.value
+            self.visualizer.value = ''
 
 # class textbox:
 #     def __init__(self, surface, x, y, length, height, text =''):
