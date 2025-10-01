@@ -1,5 +1,5 @@
 # decode-launchsim
-A projectile motion simulator specifically for FTC DECODE 2024.
+A projectile motion simulator specifically for FTC DECODE 2025.
 
 ![Screenshot of the simulator.](launchsim_preview.png)
 
